@@ -1,2 +1,2 @@
-# Program-1-Trace
-Programming Assignment 1 for Networks
+Ryan Nguyen 3pm
+Program #1 - Trace 
