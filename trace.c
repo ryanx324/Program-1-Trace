@@ -8,14 +8,24 @@ int main(int argc, char *argv[]){
         return 1;
     }
 
-    char ERRBUF[PCAP_ERRBUF_SIZE]; // Error buffer of size defined by the header
+    char ERRBUF[PCAP_ERRBUF_SIZE]; // Error buffer of size defined by "pcap.h" (256)
 
-    pcap_t *handle_packet = pcap_open_offline(argv[1], ERRBUF);
-    if (handle_packet == NULL){
+    pcap_t *packet_handler = pcap_open_offline(argv[1], ERRBUF);
+    if (packet_handler == NULL){
         fprintf(stderr, "Failed to open file %s: %s\n", argv[1], ERRBUF); // Error if file is unable to open
         return 2;
     }
 
+    //READING THE PACKET
+    struct packet_header *header; // Points to the header of the packet
+    const unsigned char *packet; //Points to the data of the packet
+    int output; // Success or Failure
+
+    
+
+
+
+    pcap_close(packet_handler); // Close the packet
     return 0;
 }
 
