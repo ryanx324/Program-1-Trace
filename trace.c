@@ -16,14 +16,26 @@ int main(int argc, char *argv[]){
         return 2;
     }
 
-    //READING THE PACKET
-    struct packet_header *header; // Points to the header of the packet
-    const unsigned char *packet; //Points to the data of the packet
+    // READING THE PACKET
+    struct pcap_pkthdr *header; // Points to the header of the packet
+    const unsigned char *packet; // Points to the data of the packet
     int output; // Success or Failure
 
-    
+    // Struct for Ethernet Header
+    struct ethernet_header {
+        unsigned char dest_addr[6]; // Destination MAC Address
+        unsigned char source_addr[6]; // Source MAC Address
+        unsigned int type[2]; // Type
+    };
 
+    while ((output = pcap_next_ex(packet_handler, &header, &packet)) == 1){
+        struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
 
+        if (output == -1){
+            fprintf(stderr, "Packet read error\n");
+            break;
+        }
+    }
 
     pcap_close(packet_handler); // Close the packet
     return 0;
