@@ -28,21 +28,32 @@ int main(int argc, char *argv[]){
         unsigned char source_addr[6]; // Source MAC Address
         unsigned short type; // Type
     };
+
+    // Struct for ARP Header
+    struct arp_header {
+        char opcode; // Opcode
+        unsigned char senderMAC[6]; // Sender MAC address
+        unsigned char senderIP[4]; // Sender IP address
+        unsigned char targetMAC[6]; // Target MAC address
+        unsigned char targetIP[4]; // Target IP address
+    };
     
+    // Reading the packet file
     while ((output = pcap_next_ex(packet_handler, &header, &packet)) == 1){
         packet_num++;
-
+         
+        // Reading the ethernet header
         struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
 
-        printf("Packet Number: %d  Frame Len: %d\n", packet_num, header->len);
+        printf("Packet Number: %d  Frame Len: %d\n", packet_num, header->len); // Print packet num and frame len
 
         printf("\n");
 
-        printf("\tEthernet Header\n");
+        printf("\tEthernet Header\n"); // Print Eth header
 
-        printf("\t\tDest MAC: ");
+        printf("\t\tDest MAC: "); 
         for (int i = 0; i < 6; i++){
-            printf("%02x", eth_hdr->dest_addr[i]);
+            printf("%02x", eth_hdr->dest_addr[i]); // Print Dest MAC addr
             if (i < 6 - 1){
                 printf(":");
             }
@@ -52,7 +63,7 @@ int main(int argc, char *argv[]){
 
         printf("\t\tSource MAC: ");
         for (int i = 0; i < 6; i++){
-            printf("%02x", eth_hdr->source_addr[i]);
+            printf("%02x", eth_hdr->source_addr[i]); // Print Source MAC addr
             if (i < 6 - 1){
                 printf(":");
             }
@@ -64,14 +75,17 @@ int main(int argc, char *argv[]){
         //Case statement for the different types
         unsigned short e_type = ntohs(eth_hdr->type);
         switch(e_type){
-            case 0x0806:
+            case 0x0806: // ARP in hexadecimal
             printf("ARP\n");
 
             // default:
             // printf("%04x\n", eth_hdr->type);
         }
-        
+
         printf("\n");
+        printf("\t ARP Header\n");
+
+        printf("\t\tSender MAC: ");
 
         if (output == -1){
             fprintf(stderr, "Packet read error\n");
