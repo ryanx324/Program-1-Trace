@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
 
     // Struct for ARP Header
     struct arp_header {
-        char opcode; // Opcode
+        char opcode[2]; // Opcode
         unsigned char hard_type[2]; // Hard type
         unsigned char prot_type[2]; // Prot type
         unsigned char hard_size[1]; // Hard size
@@ -51,39 +51,30 @@ int main(int argc, char *argv[]){
         // Reading the ethernet header
         struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
 
+        // Reading the ARP header
+        struct arp_header *arp_hdr = (struct arp_header*) packet;
+
+        //ETH Header
         char dest_MAC_addr[18];
         char src_MAC_addr[18];
 
+        //ARP Header
+        char opcode[2];
+        char senderMAC[18];
+        char senderIP[14];
+        char targetMAC[18];
+        char targetIP[14];
+
+        // Reading the Eth Header
         memcpy(dest_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->dest_addr), sizeof(dest_MAC_addr));
         memcpy(src_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->source_addr), sizeof(src_MAC_addr));
 
-        printf("Packet Number: %d  Frame Len: %d\n", packet_num, header->len); // Print packet num and frame len
-
-        printf("\n");
+        printf("Packet Number: %d  Frame Len: %d\n\n", packet_num, header->len); // Print packet num and frame len
 
         printf("\tEthernet Header\n"); // Print Eth header
 
         printf("\t\tDest MAC: %s\n", dest_MAC_addr);
-
-        // printf("\t\tDest MAC: "); 
-        // for (int i = 0; i < 6; i++){
-        //     printf("%01x", eth_hdr->dest_addr[i]); // Print Dest MAC addr
-        //     if (i < 5){
-        //         printf(":");
-        //     }
-        // }
-
-        printf("\n");
-
-        // printf("\t\tSource MAC: ");
-        // for (int i = 0; i < 6; i++){
-        //     printf("%01x", eth_hdr->source_addr[i]); // Print Source MAC addr
-        //     if (i < 5){
-        //         printf(":");
-        //     }
-        // }
-        
-        printf("\n");
+        printf("\t\tSource MAC: %s\n", src_MAC_addr);
         printf("\t\tType: ");
 
         //Case statement for the different types
@@ -91,46 +82,22 @@ int main(int argc, char *argv[]){
         switch(e_type){
             case 0x0806: // ARP in hexadecimal
             printf("ARP\n");
+            break;
 
-            // default:
-            // printf("%04x\n", eth_hdr->type);
+            default:
+            printf("%04x\n", e_type);
         }
 
-        // printf("\n");
+        printf("\n");
+        printf("\tARP Header\n"); //Print ARP header
 
-        // struct arp_header *arp_hdr = (struct arp_header*) packet;
-        // printf("\t ARP Header\n");
+        // Reading the ARP Header
+        memcpy(opcode, inet_ntoa(*(struct in_addr*)&arp_hdr->opcode), sizeof(opcode));
+        memcpy(senderMAC, inet_ntoa(*(struct in_addr*)&arp_hdr->senderMAC), sizeof(senderMAC));
+        memcpy(senderIP, inet_ntoa(*(struct in_addr*)&arp_hdr->senderIP), sizeof(senderIP));
+        memcpy(targetMAC, inet_ntoa(*(struct in_addr*)&arp_hdr->targetMAC), sizeof(targetMAC));
+        memcpy(targetIP, inet_ntoa(*(struct in_addr*)&arp_hdr->targetIP), sizeof(targetIP));
 
-        // printf("\t\tOpcode: ");
-        // printf("\n");
-
-
-        // printf("\t\tSender MAC: ");
-        // for (int i = 22; i < 26; i++){
-        //     printf("%01x", arp_hdr->senderMAC[i]); // Print sender MAC addr
-        //     if (i < 25){
-        //         printf(":");
-        //     }
-        // }
-        // printf("\n");
-        // printf("\t\tSender IP: ");
-        // for (int i = 22; i < 26; i++){
-        //     printf("%d", arp_hdr->senderIP[i]); // Print sender IP addr
-        //     if (i < 25){
-        //         printf(".");
-        //     }
-        // }
-        // printf("\n");
-        // printf("\t\tTarget MAC: ");
-        // printf("\n");
-        // printf("\t\tTarget IP: ");
-        // for (int i = 31; i < 35; i++){
-        //     printf("%d", arp_hdr->senderIP[i]); // Print sender IP addr
-        //     if (i < 34){
-        //         printf(".");
-        //     }
-        // }
-        // printf("\n");
 
         if (output == -1){
             fprintf(stderr, "Packet read error\n");
