@@ -66,12 +66,6 @@ int main(int argc, char *argv[]){
         // Reading the ethernet header
         struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
 
-        // Reading the ARP header
-        // struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
-
-        // Reading the IP header
-        // struct ip_header *ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
-
         //ETH Header byte len
         char dest_MAC_addr[20];
         char src_MAC_addr[18];
@@ -112,6 +106,7 @@ int main(int argc, char *argv[]){
         
         switch(e_type){
             case 0x0806: // ARP in hexadecimal
+                // Reading the ARP header
                 struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
 
                 // Reading the ARP Header
@@ -143,6 +138,7 @@ int main(int argc, char *argv[]){
                 break;
 
             case 0x0800: // IP Header
+                // Reading the IP header
                 struct ip_header *ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
 
                 printf("IP\n\n");
@@ -172,13 +168,19 @@ int main(int argc, char *argv[]){
                     default:
                     fprintf(stderr, "ERROR\n");
                     break;
-
                 }
+                printf("\t\tChecksum: GO BACK TO THIS\n");
+                
+                char IP_sender_addr[14];
+                char IP_dest_addr[14];
 
+                memcpy(IP_sender_addr, inet_ntoa(*(struct in_addr*)&ip_hdr->src_IP), sizeof(IP_sender_addr));
+                memcpy(IP_dest_addr, inet_ntoa(*(struct in_addr*)&ip_hdr->dest_IP), sizeof(IP_dest_addr));
 
+                printf("\t\tSender IP: %s\n", IP_sender_addr);
+                printf("\t\tDest IP: %s\n", IP_dest_addr);
+                
                 break;
-
-
             default:
             printf("%04x\n", e_type);
         }
