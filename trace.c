@@ -22,7 +22,7 @@ int main(int argc, char *argv[]){
     struct pcap_pkthdr *header; // Points to the header of the packet
     const unsigned char *packet; // Points to the data of the packet
     int output; // Success or Failure
-    int packet_num; // Packet Number
+    int packet_num = 0; // Packet Number
 
     // Struct for Ethernet Header
     struct ethernet_header {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
 
     // Struct for ARP Header
     struct arp_header {
-        char opcode[2]; // Opcode
+        short opcode; // Opcode
         unsigned char hard_type[2]; // Hard type
         unsigned char prot_type[2]; // Prot type
         unsigned char hard_size[1]; // Hard size
@@ -52,14 +52,14 @@ int main(int argc, char *argv[]){
         struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
 
         // Reading the ARP header
-        struct arp_header *arp_hdr = (struct arp_header*) packet;
+        struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
 
         //ETH Header
         char dest_MAC_addr[18];
         char src_MAC_addr[18];
 
         //ARP Header
-        char opcode[2];
+        unsigned short opcode;
         char senderMAC[18];
         char senderIP[14];
         char targetMAC[18];
@@ -88,16 +88,32 @@ int main(int argc, char *argv[]){
             printf("%04x\n", e_type);
         }
 
-        printf("\n");
-        printf("\tARP Header\n"); //Print ARP header
-
         // Reading the ARP Header
-        memcpy(opcode, inet_ntoa(*(struct in_addr*)&arp_hdr->opcode), sizeof(opcode));
+        opcode = ntohs(arp_hdr->opcode);
         memcpy(senderMAC, inet_ntoa(*(struct in_addr*)&arp_hdr->senderMAC), sizeof(senderMAC));
         memcpy(senderIP, inet_ntoa(*(struct in_addr*)&arp_hdr->senderIP), sizeof(senderIP));
         memcpy(targetMAC, inet_ntoa(*(struct in_addr*)&arp_hdr->targetMAC), sizeof(targetMAC));
         memcpy(targetIP, inet_ntoa(*(struct in_addr*)&arp_hdr->targetIP), sizeof(targetIP));
 
+        printf("\n");
+        printf("\tARP Header\n"); //Print ARP header
+
+        printf("\t\tOpcode: ");
+
+        if (opcode == 1){
+            printf("Request\n");
+        }
+        else if (opcode == 2){
+            printf("Reply\n");
+        }
+        else{
+            printf("%d\n", opcode);
+        }
+        
+        printf("\t\tSender MAC: %s\n", senderMAC);
+        printf("\t\tSender IP: %s\n", inet_ntoa(*(struct in_addr*)&arp_hdr->senderIP));
+        printf("\t\tTarget MAC: %s\n", targetMAC);
+        printf("\t\tTarget IP: %s\n", inet_ntoa(*(struct in_addr*)&arp_hdr->targetIP));
 
         if (output == -1){
             fprintf(stderr, "Packet read error\n");
