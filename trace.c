@@ -4,6 +4,7 @@
 #include <netinet/ether.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include "checksum.h"
 
 // READING THE PACKET
 struct pcap_pkthdr *header; // Points to the header of the packet
@@ -37,12 +38,25 @@ struct ip_header{
     uint8_t service_type;
     uint16_t total_len;
     uint16_t indentification;
-    uint16_t flag_and_flagoffset;
+    uint16_t flag_and_fragoffset;
     uint8_t TTL;
     uint8_t protocol;
     uint16_t header_checksum;
     unsigned char src_IP[4];
     unsigned char dest_IP[4];
+};
+
+//Struct for TCP Header
+struct tcp_header{
+    uint16_t source_port;
+    uint16_t dest_port;
+    uint32_t seq_num;
+    uint32_t ack_num;
+    uint8_t headerlen_and_reservedbits;
+    uint8_t flags;
+    uint16_t window_size;
+    uint16_t checksum;
+    uint16_t urgent_ptr;
 };
 
 int main(int argc, char *argv[]){
@@ -58,6 +72,9 @@ int main(int argc, char *argv[]){
         fprintf(stderr, "Failed to open file %s: %s\n", argv[1], ERRBUF); // Error if file is unable to open
         return 2;
     }
+
+    // BIG STRING
+    char IP_filler_string[1000];
     
     // Reading the packet file
     while ((output = pcap_next_ex(packet_handler, &header, &packet)) == 1){
@@ -102,7 +119,6 @@ int main(int argc, char *argv[]){
 
         //Case statement for the different types
         unsigned short e_type = ntohs(eth_hdr->type);
-
         
         switch(e_type){
             case 0x0806: // ARP in hexadecimal
@@ -155,6 +171,16 @@ int main(int argc, char *argv[]){
                 switch(ip_hdr->protocol){
                     case 6:
                     printf("TCP\n");
+                    struct tcp_header *tcp_hdr = (struct tcp_header*) ((unsigned char*)ip_hdr + header_length);
+                    // sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: %d\n\t\tDest Port: %d\n\t\tSequence Number: %d\n\t\tACK Number: %d\n\t\tACK Flag: %d\n\t\tSYN Flag: %d\n\t\tRST Flag: %d\n\t\tFIN Flag: %d\n\t\tWindow Size: %d\n\t\tChecksum: %d\n");
+                    sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: ");
+                    if (ntohs(tcp_hdr->source_port) == 80){
+                        sprintf(IP_filler_string,"%sHTTP\n\t\tDest Port: : %d\n\t\t",IP_filler_string, ntohs(tcp_hdr->dest_port));
+                    }
+                    else if (ntohs(tcp_hdr->dest_port) == 80){
+                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
+                    }
+
                     break;
 
                     case 1:
@@ -178,14 +204,14 @@ int main(int argc, char *argv[]){
                 memcpy(IP_dest_addr, inet_ntoa(*(struct in_addr*)&ip_hdr->dest_IP), sizeof(IP_dest_addr));
 
                 printf("\t\tSender IP: %s\n", IP_sender_addr);
-                printf("\t\tDest IP: %s\n", IP_dest_addr);
-                
+                printf("\t\tDest IP: %s\n\n%s", IP_dest_addr, IP_filler_string);
+                ////////////////////////////////////////////
                 break;
+
             default:
             printf("%04x\n", e_type);
         }
-
-
+        
         if (output == -1){
             fprintf(stderr, "Packet read error\n");
             break;
