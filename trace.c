@@ -67,6 +67,15 @@ struct udp_header{
     uint16_t checksum;
 };
 
+// Struct for ICMP Header
+struct icmp_header{
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint16_t identifier;
+    uint16_t seq_number;
+};
+
 int main(int argc, char *argv[]){
     if (argc != 2){
         fprintf(stderr, "Error: Not the correct amount of args\n"); // Error if there is an incorrect amount of arguments
@@ -198,7 +207,7 @@ int main(int argc, char *argv[]){
                     // sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
                     
                     if(ntohl(tcp_hdr->ack_num) != 0){
-                        sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
+                        sprintf(IP_filler_string, "%s\t\tACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
                     }
                     else{
                         sprintf(IP_filler_string, "%s\t\tACK Number: <Not Valid>\n", IP_filler_string);
@@ -242,25 +251,41 @@ int main(int argc, char *argv[]){
 
                     // Window Size
                     sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
+                    
+                    //CHECKSUM FOR TCP//
+                    sprintf(IP_filler_string, "%s\t\tChecksum: \n", IP_filler_string);
 
                     break;                
 
                     case 1:
                     printf("ICMP\n");
+                    struct icmp_header *icmp_hdr = (struct icmp_header*) ((unsigned char*)ip_hdr + header_length);
+                    sprintf(IP_filler_string, "\tICMP Header \n\t\tType: %d\n", ntohs(icmp_hdr->type));
+
+                    if(ntohs(icmp_hdr->type) == 0){
+                        sprintf(IP_filler_string, "\tICMP Header \n\t\tType: Reply\n\n");
+                    }
+                    else{
+                        sprintf(IP_filler_string, "\tICMP Header \n\t\tType: Request\n\n");
+                    }
+                    
                     break;
 
                     case 17:
                     printf("UDP\n");
                     struct udp_header *udp_hdr = (struct udp_header*) ((unsigned char*)ip_hdr + header_length);
-                    sprintf(IP_filler_string, "%s\t\tSource Port: %d\n", IP_filler_string, ntohs(udp_hdr->source_port));
+                    sprintf(IP_filler_string, "\tUDP Header \n\t\tSource Port: : %d\n\t\tDest Port: :%d\n", ntohs(udp_hdr->source_port), ntohs(udp_hdr->dest_port));
 
                     break;
 
                     default:
                     fprintf(stderr, "ERROR\n");
                     break;
+                } 
+                // sprintf(IP_filler_string, "\n\t\tChecksum: %d\n", in_cksum(ip_hdr, sizeof(struct ip_header)));
+                if(in_cksum(ip_hdr, sizeof(struct ip_header)) == 0){
+                    printf("\t\tChecksum: Correct (0x%x)\n", ip_hdr->header_checksum);
                 }
-                printf("\t\tChecksum: GO BACK TO THIS\n");
                 
                 char IP_sender_addr[14];
                 char IP_dest_addr[14];
