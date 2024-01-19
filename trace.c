@@ -59,6 +59,14 @@ struct tcp_header{
     uint16_t urgent_ptr;
 };
 
+// Struct for UDP Header
+struct udp_header{
+    uint16_t source_port;
+    uint16_t dest_port;
+    uint16_t length;
+    uint16_t checksum;
+};
+
 int main(int argc, char *argv[]){
     if (argc != 2){
         fprintf(stderr, "Error: Not the correct amount of args\n"); // Error if there is an incorrect amount of arguments
@@ -174,15 +182,28 @@ int main(int argc, char *argv[]){
                     struct tcp_header *tcp_hdr = (struct tcp_header*) ((unsigned char*)ip_hdr + header_length);
                     // sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: %d\n\t\tDest Port: %d\n\t\tSequence Number: %d\n\t\tACK Number: %d\n\t\tACK Flag: %d\n\t\tSYN Flag: %d\n\t\tRST Flag: %d\n\t\tFIN Flag: %d\n\t\tWindow Size: %d\n\t\tChecksum: %d\n");
                     sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: ");
+
+                    
                     if (ntohs(tcp_hdr->source_port) == 80){
                         sprintf(IP_filler_string,"%sHTTP\n\t\tDest Port: : %d\n\t\t",IP_filler_string, ntohs(tcp_hdr->dest_port));
                     }
                     else if (ntohs(tcp_hdr->dest_port) == 80){
-                    sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
+                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
                     }
-                    sprintf(IP_filler_string, "%sSequence Number: %u\n\t\t", IP_filler_string, ntohl(tcp_hdr->seq_num));
-                    sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
+                    else{
+                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: :%d\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port), ntohs(tcp_hdr->dest_port));
+                    }
+
+                    sprintf(IP_filler_string, "%sSequence Number: %u\n", IP_filler_string, ntohl(tcp_hdr->seq_num));
+                    // sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
                     
+                    if(ntohl(tcp_hdr->ack_num) != 0){
+                        sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
+                    }
+                    else{
+                        sprintf(IP_filler_string, "%s\t\tACK Number: <Not Valid>\n", IP_filler_string);
+                    }
+
                     // ACK Flag
                     uint16_t ACK_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x10;
                     if(ACK_Flag == 16){
@@ -194,7 +215,7 @@ int main(int argc, char *argv[]){
 
                     // SYN Flag
                     uint16_t SYN_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x02;
-                    if(SYN_Flag == 16){
+                    if(SYN_Flag == 2){
                         sprintf(IP_filler_string, "%s\t\tSYN Flag: Yes\n", IP_filler_string);
                     }
                     else{
@@ -203,7 +224,7 @@ int main(int argc, char *argv[]){
 
                     // RST Flag
                     uint16_t RST_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x04;
-                    if(RST_Flag == 16){
+                    if(RST_Flag == 4){
                         sprintf(IP_filler_string, "%s\t\tRST Flag: Yes\n", IP_filler_string);
                     }
                     else{
@@ -212,7 +233,7 @@ int main(int argc, char *argv[]){
 
                     // FIN Flag
                     uint16_t FIN_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x01;
-                    if(FIN_Flag == 16){
+                    if(FIN_Flag == 1){
                         sprintf(IP_filler_string, "%s\t\tFIN Flag: Yes\n", IP_filler_string);
                     }
                     else{
@@ -221,7 +242,6 @@ int main(int argc, char *argv[]){
 
                     // Window Size
                     sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
-                    printf("%d", tcp_hdr->window_size);
 
                     break;                
 
@@ -231,6 +251,9 @@ int main(int argc, char *argv[]){
 
                     case 17:
                     printf("UDP\n");
+                    struct udp_header *udp_hdr = (struct udp_header*) ((unsigned char*)ip_hdr + header_length);
+                    sprintf(IP_filler_string, "%s\t\tSource Port: %d\n", IP_filler_string, ntohs(udp_hdr->source_port));
+
                     break;
 
                     default:
