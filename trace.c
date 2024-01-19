@@ -210,7 +210,7 @@ int main(int argc, char *argv[]){
                         sprintf(IP_filler_string, "%s\t\tACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
                     }
                     else{
-                        sprintf(IP_filler_string, "%s\t\tACK Number: <Not Valid>\n", IP_filler_string);
+                        sprintf(IP_filler_string, "%s\t\tACK Number: <not valid>\n", IP_filler_string);
                     }
 
                     // ACK Flag
@@ -251,7 +251,7 @@ int main(int argc, char *argv[]){
 
                     // Window Size
                     sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
-                    
+
                     //CHECKSUM FOR TCP//
                     sprintf(IP_filler_string, "%s\t\tChecksum: \n", IP_filler_string);
 
