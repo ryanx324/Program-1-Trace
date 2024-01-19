@@ -108,6 +108,7 @@ int main(int argc, char *argv[]){
 
         //Case statement for the different types
         unsigned short e_type = ntohs(eth_hdr->type);
+
         
         switch(e_type){
             case 0x0806: // ARP in hexadecimal
@@ -154,7 +155,25 @@ int main(int argc, char *argv[]){
                 printf("\t\tTTL: %d\n", ip_hdr->TTL);
                 unsigned short ip_pdu_len = ntohs(ip_hdr->total_len);
                 printf("\t\tIP PDU Len: %d (bytes)\n", ip_pdu_len);
-                printf("Protocol: \n");
+                printf("\t\tProtocol: ");
+                switch(ip_hdr->protocol){
+                    case 6:
+                    printf("TCP\n");
+                    break;
+
+                    case 1:
+                    printf("ICMP\n");
+                    break;
+
+                    case 17:
+                    printf("UDP\n");\
+                    break;
+
+                    default:
+                    fprintf(stderr, "ERROR\n");
+                    break;
+
+                }
 
 
                 break;
