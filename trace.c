@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <pcap.h>
 #include <string.h>
+#include <stdlib.h>
 #include <netinet/ether.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -35,7 +36,8 @@ struct arp_header {
 
 // Struct for IP Header
 struct ip_header{
-    uint8_t version_and_headerlen;
+    uint8_t headerlen:4;
+    uint8_t version:4;
     uint8_t service_type;
     uint16_t total_len;
     uint16_t indentification;
@@ -74,6 +76,15 @@ struct icmp_header{
     uint16_t checksum;
     uint16_t identifier;
     uint16_t seq_number;
+};
+
+// Struct for the Pseuodoheader
+struct pseudo_tcp_header{
+    uint32_t source_addr;
+    uint32_t dest_addr;
+    uint8_t reserved;
+    uint8_t protocol;
+    uint16_t tcp_length;
 };
 
 int main(int argc, char *argv[]){
@@ -126,7 +137,7 @@ int main(int argc, char *argv[]){
         memcpy(src_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->source_addr), sizeof(src_MAC_addr));
 
         // Print packet num and frame len
-        printf("Packet Number: %d  Frame Len: %d\n\n", packet_num, header->len); 
+        printf("\nPacket number: %d  Frame Len: %d\n\n", packet_num, header->len); 
 
         // Print Ethernet header
         printf("\tEthernet Header\n"); 
@@ -138,11 +149,9 @@ int main(int argc, char *argv[]){
         unsigned short e_type = ntohs(eth_hdr->type);
         
         switch(e_type){
-            case 0x0806: // ARP in hexadecimal
+            case 2054: // ARP in hexadecimal
                 // Reading the ARP header
                 struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
-
-                // Reading the ARP Header
                 printf("ARP\n\n");
                 printf("\tARP header\n"); 
 
@@ -170,37 +179,39 @@ int main(int argc, char *argv[]){
                 printf("\t\tTarget IP: %s\n\n", inet_ntoa(*(struct in_addr*)&arp_hdr->targetIP));
                 break;
 
-            case 0x0800: // IP Header
+            case 2048: // IP Header
                 // Reading the IP header
                 struct ip_header *ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
 
                 printf("IP\n\n");
                 printf("\tIP Header\n");
-                int header_length = (ip_hdr->version_and_headerlen & 0x0F) * 4;
+                int IP_header_length = (ip_hdr->headerlen & 0x0F) * 4;
 
                 
-                printf("\t\tHeader Len: %d (bytes)\n", header_length);
+                printf("\t\tHeader Len: %d (bytes)\n", IP_header_length);
                 printf("\t\tTOS: 0x%x\n", ip_hdr->service_type);
                 printf("\t\tTTL: %d\n", ip_hdr->TTL);
+
                 unsigned short ip_pdu_len = ntohs(ip_hdr->total_len);
+
                 printf("\t\tIP PDU Len: %d (bytes)\n", ip_pdu_len);
                 printf("\t\tProtocol: ");
                 switch(ip_hdr->protocol){
                     case 6:
                     printf("TCP\n");
-                    struct tcp_header *tcp_hdr = (struct tcp_header*) ((unsigned char*)ip_hdr + header_length);
+                    struct tcp_header *tcp_hdr = (struct tcp_header*) ((unsigned char*)ip_hdr + IP_header_length);
                     // sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: %d\n\t\tDest Port: %d\n\t\tSequence Number: %d\n\t\tACK Number: %d\n\t\tACK Flag: %d\n\t\tSYN Flag: %d\n\t\tRST Flag: %d\n\t\tFIN Flag: %d\n\t\tWindow Size: %d\n\t\tChecksum: %d\n");
                     sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: ");
 
                     
                     if (ntohs(tcp_hdr->source_port) == 80){
-                        sprintf(IP_filler_string,"%sHTTP\n\t\tDest Port: : %d\n\t\t",IP_filler_string, ntohs(tcp_hdr->dest_port));
+                        sprintf(IP_filler_string,"%s HTTP\n\t\tDest Port: : %d\n\t\t",IP_filler_string, ntohs(tcp_hdr->dest_port));
                     }
                     else if (ntohs(tcp_hdr->dest_port) == 80){
-                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
+                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port:  HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
                     }
                     else{
-                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: :%d\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port), ntohs(tcp_hdr->dest_port));
+                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: : %d\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port), ntohs(tcp_hdr->dest_port));
                     }
 
                     sprintf(IP_filler_string, "%sSequence Number: %u\n", IP_filler_string, ntohl(tcp_hdr->seq_num));
@@ -252,29 +263,64 @@ int main(int argc, char *argv[]){
                     // Window Size
                     sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
 
-                    //CHECKSUM FOR TCP//
-                    sprintf(IP_filler_string, "%s\t\tChecksum: \n", IP_filler_string);
+                    ////////////////////////CHECKSUM FOR TCP////////////////////////
+                    tcp_hdr->checksum = 0;
 
-                    break;                
+                    uint32_t tcp_seg_len = ntohs(ip_hdr->total_len) - IP_header_length;    
+
+                    struct pseudo_tcp_header pseudo_tcp;
+
+                    // memset(&pseudo_tcp, 0, sizeof(pseudo_tcp));
+                    memcpy(&(pseudo_tcp.source_addr), &(ip_hdr->src_IP), sizeof(ip_hdr->src_IP));
+                    memcpy(&(pseudo_tcp.dest_addr), &(ip_hdr->dest_IP), sizeof(ip_hdr->dest_IP));
+                    pseudo_tcp.reserved = 0;
+                    pseudo_tcp.protocol = 6;
+                    pseudo_tcp.tcp_length = htons(tcp_seg_len);
+
+                    uint32_t total_length = sizeof(struct pseudo_tcp_header) + tcp_seg_len;
+
+                    unsigned char* combined_len = malloc(total_length);
+
+                    if(combined_len == NULL){
+                        fprintf(stderr, "Memory Allocation Failure\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    memcpy(combined_len, &pseudo_tcp, sizeof(struct pseudo_tcp_header));
+                    memcpy(combined_len + sizeof(struct pseudo_tcp_header), tcp_hdr, tcp_seg_len);
+
+                    unsigned short tcp_checksum = in_cksum((unsigned short*)combined_len, total_length);
+
+                    free(combined_len);
+
+                    printf("\t\tThis is the TCP check sum number: %d\n", tcp_checksum);
+
+                    if (tcp_checksum == 0) {
+                        printf("\t\tChecksum: Correct\n");
+                    } else {
+                        printf("\t\tChecksum: Incorrect (Calculated: 0x%04x, Expected: 0x%04x)\n", tcp_checksum, ntohs(tcp_hdr->checksum));
+                    }
+                    break;            
+                    ////////////////////////////////////////////////////////    
 
                     case 1:
                     printf("ICMP\n");
-                    struct icmp_header *icmp_hdr = (struct icmp_header*) ((unsigned char*)ip_hdr + header_length);
+                    struct icmp_header *icmp_hdr = (struct icmp_header*) ((unsigned char*)ip_hdr + IP_header_length);
                     sprintf(IP_filler_string, "\tICMP Header \n\t\tType: %d\n", ntohs(icmp_hdr->type));
 
                     if(ntohs(icmp_hdr->type) == 0){
-                        sprintf(IP_filler_string, "\tICMP Header \n\t\tType: Reply\n\n");
+                        sprintf(IP_filler_string, "\tICMP Header\n\t\tType: Reply\n");
                     }
                     else{
-                        sprintf(IP_filler_string, "\tICMP Header \n\t\tType: Request\n\n");
+                        sprintf(IP_filler_string, "\tICMP Header\n\t\tType: Request\n");
                     }
                     
                     break;
 
                     case 17:
                     printf("UDP\n");
-                    struct udp_header *udp_hdr = (struct udp_header*) ((unsigned char*)ip_hdr + header_length);
-                    sprintf(IP_filler_string, "\tUDP Header \n\t\tSource Port: : %d\n\t\tDest Port: :%d\n", ntohs(udp_hdr->source_port), ntohs(udp_hdr->dest_port));
+                    struct udp_header *udp_hdr = (struct udp_header*) ((unsigned char*)ip_hdr + IP_header_length);
+                    sprintf(IP_filler_string, "\tUDP Header\n\t\tSource Port: : %d\n\t\tDest Port: : %d\n", ntohs(udp_hdr->source_port), ntohs(udp_hdr->dest_port));
 
                     break;
 
@@ -283,12 +329,12 @@ int main(int argc, char *argv[]){
                     break;
                 } 
                 // sprintf(IP_filler_string, "\n\t\tChecksum: %d\n", in_cksum(ip_hdr, sizeof(struct ip_header)));
-                if(in_cksum(ip_hdr, sizeof(struct ip_header)) == 0){
+                if(in_cksum(ip_hdr, ip_hdr->headerlen * 4) == 0){
                     printf("\t\tChecksum: Correct (0x%x)\n", ip_hdr->header_checksum);
                 }
                 
-                char IP_sender_addr[14];
-                char IP_dest_addr[14];
+                char IP_sender_addr[18];
+                char IP_dest_addr[18];
 
                 memcpy(IP_sender_addr, inet_ntoa(*(struct in_addr*)&ip_hdr->src_IP), sizeof(IP_sender_addr));
                 memcpy(IP_dest_addr, inet_ntoa(*(struct in_addr*)&ip_hdr->dest_IP), sizeof(IP_dest_addr));
@@ -297,7 +343,7 @@ int main(int argc, char *argv[]){
                 printf("\t\tDest IP: %s\n\n%s", IP_dest_addr, IP_filler_string);
                 break;
             default:
-            printf("%04x\n", e_type);
+            // printf("%04x\n", e_type);
         }
         
         if (output == -1){
