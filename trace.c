@@ -33,14 +33,14 @@ struct arp_header {
 
 // Struct for IP Header
 struct ip_header{
-    unsigned char version_and_headerlen[1];
-    unsigned char service_type[1];
-    unsigned char total_len[2];
-    unsigned char indentification[2];
-    unsigned char flag_and_fragoffset[2];
-    unsigned char TTL[1];
-    unsigned char protocol[1];
-    unsigned char header_checksum[2];
+    uint8_t version_and_headerlen[1];
+    uint8_t service_type[1];
+    uint16_t total_len[2];
+    uint16_t indentification[2];
+    uint16_t flag_and_fragoffset[2];
+    uint8_t TTL[1];
+    uint8_t protocol[1];
+    uint16_t header_checksum[2];
     unsigned char src_IP[4];
     unsigned char dest_IP[4];
 };
@@ -67,7 +67,10 @@ int main(int argc, char *argv[]){
         struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
 
         // Reading the ARP header
-        struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
+        // struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
+
+        // Reading the IP header
+        // struct ip_header *ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
 
         //ETH Header byte len
         char dest_MAC_addr[20];
@@ -79,6 +82,16 @@ int main(int argc, char *argv[]){
         char senderIP[14];
         char targetMAC[18];
         char targetIP[14];
+
+        //IP Header byte len
+        char header_length[2];
+        char TOS[4];
+        char TTL[4];
+        char IP_PDU_Len[4];
+        char protocol[4];
+        char checksum[5]; 
+        char sender_IP[18];
+        char dest_IP[18];
 
         // Reading the Eth Header
         memcpy(dest_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->dest_addr), sizeof(dest_MAC_addr));
@@ -97,6 +110,7 @@ int main(int argc, char *argv[]){
         unsigned short e_type = ntohs(eth_hdr->type);
         switch(e_type){
             case 0x0806: // ARP in hexadecimal
+                struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
 
                 // Reading the ARP Header
                 printf("ARP\n\n");
@@ -127,6 +141,17 @@ int main(int argc, char *argv[]){
                 break;
 
             case 0x0800: // IP Header
+                struct ip_header *ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
+
+                printf("IP\n\n");
+                printf("\tIP Header\n");
+                int header_length = (ip_hdr->version_and_headerlen[0] & 0x0F) * 4;
+
+                
+                printf("\t\tHeader Len: %d (bytes)\n", header_length);
+
+                break;
+
 
             default:
             printf("%04x\n", e_type);
