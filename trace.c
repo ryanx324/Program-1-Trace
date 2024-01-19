@@ -4,6 +4,7 @@
 #include <netinet/ether.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <arpa/inet.h>
 #include "checksum.h"
 
 // READING THE PACKET
@@ -52,8 +53,7 @@ struct tcp_header{
     uint16_t dest_port;
     uint32_t seq_num;
     uint32_t ack_num;
-    uint8_t headerlen_and_reservedbits;
-    uint8_t flags;
+    uint16_t header_reserve_flags;
     uint16_t window_size;
     uint16_t checksum;
     uint16_t urgent_ptr;
@@ -178,17 +178,59 @@ int main(int argc, char *argv[]){
                         sprintf(IP_filler_string,"%sHTTP\n\t\tDest Port: : %d\n\t\t",IP_filler_string, ntohs(tcp_hdr->dest_port));
                     }
                     else if (ntohs(tcp_hdr->dest_port) == 80){
-                        sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
+                    sprintf(IP_filler_string,"%s: %d\n\t\tDest Port: HTTP\n\t\t",IP_filler_string, ntohs(tcp_hdr->source_port));
+                    }
+                    sprintf(IP_filler_string, "%sSequence Number: %u\n\t\t", IP_filler_string, ntohl(tcp_hdr->seq_num));
+                    sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
+                    
+                    // ACK Flag
+                    uint16_t ACK_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x10;
+                    if(ACK_Flag == 16){
+                        sprintf(IP_filler_string, "%s\t\tACK Flag: Yes\n", IP_filler_string);
+                    }
+                    else{
+                        sprintf(IP_filler_string, "%s\t\tACK Flag: No\n", IP_filler_string);
                     }
 
-                    break;
+                    // SYN Flag
+                    uint16_t SYN_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x02;
+                    if(SYN_Flag == 16){
+                        sprintf(IP_filler_string, "%s\t\tSYN Flag: Yes\n", IP_filler_string);
+                    }
+                    else{
+                        sprintf(IP_filler_string, "%s\t\tSYN Flag: No\n", IP_filler_string);
+                    }
+
+                    // RST Flag
+                    uint16_t RST_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x04;
+                    if(RST_Flag == 16){
+                        sprintf(IP_filler_string, "%s\t\tRST Flag: Yes\n", IP_filler_string);
+                    }
+                    else{
+                        sprintf(IP_filler_string, "%s\t\tRST Flag: No\n", IP_filler_string);
+                    }    
+
+                    // FIN Flag
+                    uint16_t FIN_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x01;
+                    if(FIN_Flag == 16){
+                        sprintf(IP_filler_string, "%s\t\tFIN Flag: Yes\n", IP_filler_string);
+                    }
+                    else{
+                        sprintf(IP_filler_string, "%s\t\tFIN Flag: No\n", IP_filler_string);
+                    } 
+
+                    // Window Size
+                    sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
+                    printf("%d", tcp_hdr->window_size);
+
+                    break;                
 
                     case 1:
                     printf("ICMP\n");
                     break;
 
                     case 17:
-                    printf("UDP\n");\
+                    printf("UDP\n");
                     break;
 
                     default:
@@ -205,9 +247,7 @@ int main(int argc, char *argv[]){
 
                 printf("\t\tSender IP: %s\n", IP_sender_addr);
                 printf("\t\tDest IP: %s\n\n%s", IP_dest_addr, IP_filler_string);
-                ////////////////////////////////////////////
                 break;
-
             default:
             printf("%04x\n", e_type);
         }
