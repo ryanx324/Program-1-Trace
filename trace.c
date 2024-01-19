@@ -69,10 +69,11 @@ int main(int argc, char *argv[]){
         memcpy(dest_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->dest_addr), sizeof(dest_MAC_addr));
         memcpy(src_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->source_addr), sizeof(src_MAC_addr));
 
-        printf("Packet Number: %d  Frame Len: %d\n\n", packet_num, header->len); // Print packet num and frame len
+        // Print packet num and frame len
+        printf("Packet Number: %d  Frame Len: %d\n\n", packet_num, header->len); 
 
-        printf("\tEthernet Header\n"); // Print Eth header
-
+        // Print Ethernet header
+        printf("\tEthernet Header\n"); 
         printf("\t\tDest MAC: %s\n", dest_MAC_addr);
         printf("\t\tSource MAC: %s\n", src_MAC_addr);
         printf("\t\tType: ");
@@ -94,9 +95,8 @@ int main(int argc, char *argv[]){
         memcpy(senderIP, inet_ntoa(*(struct in_addr*)&arp_hdr->senderIP), sizeof(senderIP));
         memcpy(targetMAC, ether_ntoa((struct ether_addr*)&arp_hdr->targetMAC), sizeof(targetMAC));
         memcpy(targetIP, inet_ntoa(*(struct in_addr*)&arp_hdr->targetIP), sizeof(targetIP));
-
-        printf("\tARP Header\n"); //Print ARP header
-
+        //Print ARP header
+        printf("\tARP Header\n"); 
         printf("\t\tOpcode: ");
 
         if (opcode == 1){
