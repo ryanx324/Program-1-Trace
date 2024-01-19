@@ -33,14 +33,14 @@ struct arp_header {
 
 // Struct for IP Header
 struct ip_header{
-    uint8_t version_and_headerlen[1];
-    uint8_t service_type[1];
-    uint16_t total_len[2];
-    uint16_t indentification[2];
-    uint16_t flag_and_fragoffset[2];
-    uint8_t TTL[1];
-    uint8_t protocol[1];
-    uint16_t header_checksum[2];
+    uint8_t version_and_headerlen;
+    uint8_t service_type;
+    uint16_t total_len;
+    uint16_t indentification;
+    uint16_t flag_and_flagoffset;
+    uint8_t TTL;
+    uint8_t protocol;
+    uint16_t header_checksum;
     unsigned char src_IP[4];
     unsigned char dest_IP[4];
 };
@@ -108,6 +108,7 @@ int main(int argc, char *argv[]){
 
         //Case statement for the different types
         unsigned short e_type = ntohs(eth_hdr->type);
+        
         switch(e_type){
             case 0x0806: // ARP in hexadecimal
                 struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
@@ -145,10 +146,16 @@ int main(int argc, char *argv[]){
 
                 printf("IP\n\n");
                 printf("\tIP Header\n");
-                int header_length = (ip_hdr->version_and_headerlen[0] & 0x0F) * 4;
+                int header_length = (ip_hdr->version_and_headerlen & 0x0F) * 4;
 
                 
                 printf("\t\tHeader Len: %d (bytes)\n", header_length);
+                printf("\t\tTOS: 0x%x\n", ip_hdr->service_type);
+                printf("\t\tTTL: %d\n", ip_hdr->TTL);
+                unsigned short ip_pdu_len = ntohs(ip_hdr->total_len);
+                printf("\t\tIP PDU Len: %d (bytes)\n", ip_pdu_len);
+                printf("Protocol: \n");
+
 
                 break;
 
