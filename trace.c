@@ -101,12 +101,14 @@ int main(int argc, char *argv[]){
         return 2;
     }
 
-    // BIG STRING
-    char IP_filler_string[1000];
+    
     
     // Reading the packet file
     while ((output = pcap_next_ex(packet_handler, &header, &packet)) == 1){
         packet_num++;
+
+        // BIG STRING
+        char IP_filler_string[1000] = {0};
          
         // Reading the ethernet header
         struct ethernet_header *eth_hdr = (struct ethernet_header*) packet;
@@ -200,7 +202,6 @@ int main(int argc, char *argv[]){
                     case 6:
                     printf("TCP\n");
                     struct tcp_header *tcp_hdr = (struct tcp_header*) ((unsigned char*)ip_hdr + IP_header_length);
-                    // sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: %d\n\t\tDest Port: %d\n\t\tSequence Number: %d\n\t\tACK Number: %d\n\t\tACK Flag: %d\n\t\tSYN Flag: %d\n\t\tRST Flag: %d\n\t\tFIN Flag: %d\n\t\tWindow Size: %d\n\t\tChecksum: %d\n");
                     sprintf(IP_filler_string, "\tTCP Header\n\t\tSource Port: ");
 
                     
@@ -215,17 +216,17 @@ int main(int argc, char *argv[]){
                     }
 
                     sprintf(IP_filler_string, "%sSequence Number: %u\n", IP_filler_string, ntohl(tcp_hdr->seq_num));
-                    // sprintf(IP_filler_string, "%sACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
-                    
-                    if(ntohl(tcp_hdr->ack_num) != 0){
-                        sprintf(IP_filler_string, "%s\t\tACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
+
+                    uint16_t ACK_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x10;
+                    if(ACK_Flag != 16){
+                        sprintf(IP_filler_string, "%s\t\tACK Number: <not valid>\n", IP_filler_string);
                     }
                     else{
-                        sprintf(IP_filler_string, "%s\t\tACK Number: <not valid>\n", IP_filler_string);
+                        sprintf(IP_filler_string, "%s\t\tACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
                     }
 
                     // ACK Flag
-                    uint16_t ACK_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x10;
+                    
                     if(ACK_Flag == 16){
                         sprintf(IP_filler_string, "%s\t\tACK Flag: Yes\n", IP_filler_string);
                     }
@@ -264,22 +265,21 @@ int main(int argc, char *argv[]){
                     sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
 
                     ////////////////////////CHECKSUM FOR TCP////////////////////////
-                    tcp_hdr->checksum = 0;
 
-                    uint32_t tcp_seg_len = ntohs(ip_hdr->total_len) - IP_header_length;    
+                    uint16_t tcp_seg_len = ntohs(ip_hdr->total_len) - IP_header_length;    
 
                     struct pseudo_tcp_header pseudo_tcp;
 
-                    // memset(&pseudo_tcp, 0, sizeof(pseudo_tcp));
+                    memset(&pseudo_tcp, 0, sizeof(pseudo_tcp));
                     memcpy(&(pseudo_tcp.source_addr), &(ip_hdr->src_IP), sizeof(ip_hdr->src_IP));
                     memcpy(&(pseudo_tcp.dest_addr), &(ip_hdr->dest_IP), sizeof(ip_hdr->dest_IP));
                     pseudo_tcp.reserved = 0;
                     pseudo_tcp.protocol = 6;
-                    pseudo_tcp.tcp_length = htons(tcp_seg_len);
+                    pseudo_tcp.tcp_length = ntohs(tcp_seg_len);
 
-                    uint32_t total_length = sizeof(struct pseudo_tcp_header) + tcp_seg_len;
+                    uint32_t pseudo_total_length = sizeof(struct pseudo_tcp_header) + tcp_seg_len;
 
-                    unsigned char* combined_len = malloc(total_length);
+                    unsigned char* combined_len = malloc(pseudo_total_length);
 
                     if(combined_len == NULL){
                         fprintf(stderr, "Memory Allocation Failure\n");
@@ -289,16 +289,14 @@ int main(int argc, char *argv[]){
                     memcpy(combined_len, &pseudo_tcp, sizeof(struct pseudo_tcp_header));
                     memcpy(combined_len + sizeof(struct pseudo_tcp_header), tcp_hdr, tcp_seg_len);
 
-                    unsigned short tcp_checksum = in_cksum((unsigned short*)combined_len, total_length);
+                    unsigned short tcp_checksum = in_cksum((unsigned short*)combined_len, pseudo_total_length);
 
                     free(combined_len);
 
-                    printf("\t\tThis is the TCP check sum number: %d\n", tcp_checksum);
-
                     if (tcp_checksum == 0) {
-                        printf("\t\tChecksum: Correct\n");
+                        sprintf(IP_filler_string, "%s\t\tChecksum: Correct (0x%x)\n", IP_filler_string, ntohs(tcp_hdr->checksum));
                     } else {
-                        printf("\t\tChecksum: Incorrect (Calculated: 0x%04x, Expected: 0x%04x)\n", tcp_checksum, ntohs(tcp_hdr->checksum));
+                        sprintf(IP_filler_string,"%s\t\tChecksum: Incorrect (0x%x)\n",IP_filler_string, ntohs(tcp_hdr->checksum));
                     }
                     break;            
                     ////////////////////////////////////////////////////////    
@@ -306,13 +304,14 @@ int main(int argc, char *argv[]){
                     case 1:
                     printf("ICMP\n");
                     struct icmp_header *icmp_hdr = (struct icmp_header*) ((unsigned char*)ip_hdr + IP_header_length);
-                    sprintf(IP_filler_string, "\tICMP Header \n\t\tType: %d\n", ntohs(icmp_hdr->type));
-
                     if(ntohs(icmp_hdr->type) == 0){
                         sprintf(IP_filler_string, "\tICMP Header\n\t\tType: Reply\n");
                     }
-                    else{
+                    else if(icmp_hdr->type == 8){
                         sprintf(IP_filler_string, "\tICMP Header\n\t\tType: Request\n");
+                    }
+                    else{
+                        sprintf(IP_filler_string, "\tICMP Header\n\t\tType: %d\n", icmp_hdr->type);
                     }
                     
                     break;
@@ -325,12 +324,14 @@ int main(int argc, char *argv[]){
                     break;
 
                     default:
-                    fprintf(stderr, "ERROR\n");
+                    printf("Unknown\n");
                     break;
                 } 
-                // sprintf(IP_filler_string, "\n\t\tChecksum: %d\n", in_cksum(ip_hdr, sizeof(struct ip_header)));
                 if(in_cksum(ip_hdr, ip_hdr->headerlen * 4) == 0){
                     printf("\t\tChecksum: Correct (0x%x)\n", ip_hdr->header_checksum);
+                }
+                else{
+                    printf("\t\tChecksum: Incorrect (0x%x)\n", ip_hdr->header_checksum);
                 }
                 
                 char IP_sender_addr[18];
@@ -343,7 +344,9 @@ int main(int argc, char *argv[]){
                 printf("\t\tDest IP: %s\n\n%s", IP_dest_addr, IP_filler_string);
                 break;
             default:
-            // printf("%04x\n", e_type);
+            printf("Unknown\n");
+            sprintf(IP_filler_string, "");
+            break;
         }
         
         if (output == -1){
