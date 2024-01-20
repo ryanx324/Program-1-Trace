@@ -1,16 +1,15 @@
-# Example makefile for CPE464 Trace program
+# Example makefile for CPE464 program 1
 #
-# Just links in pcap library
+# 
 
 CC = gcc
-LIBS = -lpcap
-CFLAGS = -g -Wall -pedantic 
-#CGLAGS = 
+CFLAGS = -g -Wall 
+#CFLAGS = -g
 
 all:  trace
 
-trace: trace.c 
-	$(CC) $(CFLAGS) -o $@ trace.c $(LIBS)
+trace: trace.c
+	$(CC) $(CFLAGS) -o trace trace.c checksum.c  -lpcap 
 
 clean:
 	rm -f trace

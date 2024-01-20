@@ -101,8 +101,6 @@ int main(int argc, char *argv[]){
         return 2;
     }
 
-    
-    
     // Reading the packet file
     while ((output = pcap_next_ex(packet_handler, &header, &packet)) == 1){
         packet_num++;
@@ -199,6 +197,7 @@ int main(int argc, char *argv[]){
                 printf("\t\tIP PDU Len: %d (bytes)\n", ip_pdu_len);
                 printf("\t\tProtocol: ");
                 switch(ip_hdr->protocol){
+                    // Case 6: TCP
                     case 6:
                     printf("TCP\n");
                     struct tcp_header *tcp_hdr = (struct tcp_header*) ((unsigned char*)ip_hdr + IP_header_length);
@@ -217,16 +216,17 @@ int main(int argc, char *argv[]){
 
                     sprintf(IP_filler_string, "%sSequence Number: %u\n", IP_filler_string, ntohl(tcp_hdr->seq_num));
 
-                    uint16_t ACK_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x10;
+                    // Define ACK Flag
+                    uint16_t ACK_Flag = ntohs(tcp_hdr->header_reserve_flags) & 0x10; 
+
                     if(ACK_Flag != 16){
-                        sprintf(IP_filler_string, "%s\t\tACK Number: <not valid>\n", IP_filler_string);
+                        sprintf(IP_filler_string, "%s\t\tACK Number: <not valid>\n", IP_filler_string); 
                     }
                     else{
                         sprintf(IP_filler_string, "%s\t\tACK Number: %u\n", IP_filler_string, ntohl(tcp_hdr->ack_num));
                     }
 
                     // ACK Flag
-                    
                     if(ACK_Flag == 16){
                         sprintf(IP_filler_string, "%s\t\tACK Flag: Yes\n", IP_filler_string);
                     }
@@ -264,7 +264,7 @@ int main(int argc, char *argv[]){
                     // Window Size
                     sprintf(IP_filler_string, "%s\t\tWindow Size: %d\n", IP_filler_string, ntohs(tcp_hdr->window_size));
 
-                    ////////////////////////CHECKSUM FOR TCP////////////////////////
+                    // Start of TCP Checksum
 
                     uint16_t tcp_seg_len = ntohs(ip_hdr->total_len) - IP_header_length;    
 
@@ -291,7 +291,7 @@ int main(int argc, char *argv[]){
 
                     unsigned short tcp_checksum = in_cksum((unsigned short*)combined_len, pseudo_total_length);
 
-                    free(combined_len);
+                    free(combined_len); // FREE SO NO VALGRIND ERRORS
 
                     if (tcp_checksum == 0) {
                         sprintf(IP_filler_string, "%s\t\tChecksum: Correct (0x%x)\n", IP_filler_string, ntohs(tcp_hdr->checksum));
@@ -299,8 +299,9 @@ int main(int argc, char *argv[]){
                         sprintf(IP_filler_string,"%s\t\tChecksum: Incorrect (0x%x)\n",IP_filler_string, ntohs(tcp_hdr->checksum));
                     }
                     break;            
-                    ////////////////////////////////////////////////////////    
+                    // End of TCP Checksum
 
+                    // Case 1: ICMP
                     case 1:
                     printf("ICMP\n");
                     struct icmp_header *icmp_hdr = (struct icmp_header*) ((unsigned char*)ip_hdr + IP_header_length);
@@ -316,6 +317,7 @@ int main(int argc, char *argv[]){
                     
                     break;
 
+                    // Case 17: UDP
                     case 17:
                     printf("UDP\n");
                     struct udp_header *udp_hdr = (struct udp_header*) ((unsigned char*)ip_hdr + IP_header_length);
@@ -327,12 +329,15 @@ int main(int argc, char *argv[]){
                     printf("Unknown\n");
                     break;
                 } 
+                
+                // Start of IP Checksum
                 if(in_cksum(ip_hdr, ip_hdr->headerlen * 4) == 0){
                     printf("\t\tChecksum: Correct (0x%x)\n", ip_hdr->header_checksum);
                 }
                 else{
                     printf("\t\tChecksum: Incorrect (0x%x)\n", ip_hdr->header_checksum);
                 }
+                // End of IP Checksum
                 
                 char IP_sender_addr[18];
                 char IP_dest_addr[18];
@@ -349,6 +354,7 @@ int main(int argc, char *argv[]){
             break;
         }
         
+        // Failures
         if (output == -1){
             fprintf(stderr, "Packet read error\n");
             break;
@@ -360,7 +366,8 @@ int main(int argc, char *argv[]){
 
     }
 
-    pcap_close(packet_handler); // Close the packet
+    // Close packet
+    pcap_close(packet_handler); 
     return 0;
 }
 
