@@ -147,11 +147,17 @@ int main(int argc, char *argv[]){
 
         //Case statement for the different types
         unsigned short e_type = ntohs(eth_hdr->type);
+
+        // IP header declaration
+        struct ip_header *ip_hdr;
+        
+        // ARP header declaration
+        struct arp_header *arp_hdr;
         
         switch(e_type){
             case 2054: // ARP in hexadecimal
                 // Reading the ARP header
-                struct arp_header *arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
+                arp_hdr = (struct arp_header*) (packet + sizeof(struct ethernet_header));
                 printf("ARP\n\n");
                 printf("\tARP header\n"); 
 
@@ -181,12 +187,11 @@ int main(int argc, char *argv[]){
 
             case 2048: // IP Header
                 // Reading the IP header
-                struct ip_header *ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
+                ip_hdr = (struct ip_header*) (packet + sizeof(struct ethernet_header));
 
                 printf("IP\n\n");
                 printf("\tIP Header\n");
                 int IP_header_length = (ip_hdr->headerlen & 0x0F) * 4;
-
                 
                 printf("\t\tHeader Len: %d (bytes)\n", IP_header_length);
                 printf("\t\tTOS: 0x%x\n", ip_hdr->service_type);
@@ -299,7 +304,7 @@ int main(int argc, char *argv[]){
                         sprintf(IP_filler_string,"%s\t\tChecksum: Incorrect (0x%x)\n",IP_filler_string, ntohs(tcp_hdr->checksum));
                     }
                     break;            
-                    // End of TCP Checksum
+                    // End of TCP Checksum 
 
                     // Case 1: ICMP
                     case 1:
@@ -330,14 +335,14 @@ int main(int argc, char *argv[]){
                     break;
                 } 
                 
-                // Start of IP Checksum
+                // Start of IP Checksum //
                 if(in_cksum(ip_hdr, ip_hdr->headerlen * 4) == 0){
                     printf("\t\tChecksum: Correct (0x%x)\n", ip_hdr->header_checksum);
                 }
                 else{
                     printf("\t\tChecksum: Incorrect (0x%x)\n", ip_hdr->header_checksum);
                 }
-                // End of IP Checksum
+                // End of IP Checksum //
                 
                 char IP_sender_addr[18];
                 char IP_dest_addr[18];
@@ -350,7 +355,7 @@ int main(int argc, char *argv[]){
                 break;
             default:
             printf("Unknown\n");
-            sprintf(IP_filler_string, "");
+
             break;
         }
         
