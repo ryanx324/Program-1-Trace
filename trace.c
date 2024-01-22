@@ -122,16 +122,6 @@ int main(int argc, char *argv[]){
         char targetMAC[18];
         char targetIP[14];
 
-        //IP Header byte len
-        char header_length[2];
-        char TOS[4];
-        char TTL[4];
-        char IP_PDU_Len[4];
-        char protocol[4];
-        char checksum[5]; 
-        char sender_IP[18];
-        char dest_IP[18];
-
         // Reading the Eth Header
         memcpy(dest_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->dest_addr), sizeof(dest_MAC_addr));
         memcpy(src_MAC_addr, ether_ntoa((struct ether_addr*)&eth_hdr->source_addr), sizeof(src_MAC_addr));
@@ -150,7 +140,7 @@ int main(int argc, char *argv[]){
 
         // IP header declaration
         struct ip_header *ip_hdr;
-        
+
         // ARP header declaration
         struct arp_header *arp_hdr;
         
@@ -336,7 +326,7 @@ int main(int argc, char *argv[]){
                 } 
                 
                 // Start of IP Checksum //
-                if(in_cksum(ip_hdr, ip_hdr->headerlen * 4) == 0){
+                if(in_cksum((unsigned short*)ip_hdr, ip_hdr->headerlen * 4) == 0){
                     printf("\t\tChecksum: Correct (0x%x)\n", ip_hdr->header_checksum);
                 }
                 else{
